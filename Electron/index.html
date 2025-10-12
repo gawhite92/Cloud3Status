@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+    <title>Cloud3Status</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1 id="power-display"></h1>
+    <h1 id="battery-display"></h1>
+    <h1 id="mic-display"></h1>
+    <h1 id="mute-display"></h1>
+    <h1 id="sidetone-display"></h1>
+    <script src="./renderer.js"></script>
+</body>
+
+</html>
