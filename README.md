@@ -14,10 +14,11 @@ Also a few firsts for me:
 
 Still to do:
 
-- Figure out how to send requests to device for status info. Main issue is if headset is already turned on before app is open. App currently only listens for status changes to hardware (power on, headset muted etc).
+- Send status requests to device COMPLETE (Only issue is volume/mute status. Not really needed, though could maybe just read this from windows volume instead.)
+- Make tray icon update with status changes. COMPLETE
+
+- Add Windows notifications
 - Make GUI nicer.
-- Make tray icon reflect with battery health.
-- Add status info to tray mouseover.
 - Package in .exe for easier install.
 
 Credits:
