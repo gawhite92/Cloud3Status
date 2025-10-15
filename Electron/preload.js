@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     updateMicStatus: (callback) => ipcRenderer.on('micstatus', (event, ...args) => callback(...args)),
     updateMuteStatus: (callback) => ipcRenderer.on('mutestatus', (event, ...args) => callback(...args)),
     updateSidetoneStatus: (callback) => ipcRenderer.on('sidetonestatus', (event, ...args) => callback(...args)),
+    sendMessageToMain: (message) => ipcRenderer.send('button-clicked', message)
 });

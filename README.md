@@ -1,10 +1,8 @@
 # Cloud3Status
 
-What is it?
 Tray application for HyperX Cloud3 Headset
 
-Why?
-I wanted a quick visual reference for certain headset features - battery status, mic mute status. I found the official HyperX app to be a bit busy and wanted to try make something more basic to suit my personal needs.
+Quick visual reference for certain headset features - battery, mic & sidetone status. I found the official HyperX app to be a bit busy and wanted to try make something more basic to suit my personal needs.
 
 Also a few firsts for me:
 
@@ -16,10 +14,11 @@ Still to do:
 
 - Send status requests to device COMPLETE (Only issue is volume/mute status. Not really needed, though could maybe just read this from windows volume instead.)
 - Make tray icon update with status changes. COMPLETE
+- Add buttons COMPLETE
+- Package in .exe for easier install COMPLETE (Electron Forge)
 
 - Add Windows notifications
-- Make GUI nicer.
-- Package in .exe for easier install.
+- Make nicer UI. Conditional colours for each status
 
 Credits:
 Node HID: https://www.npmjs.com/package/node-hid

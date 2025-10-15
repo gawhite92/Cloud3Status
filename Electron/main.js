@@ -26,16 +26,31 @@ function createTray(iconpath) {
     });
 }
 
+const red = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACTSURBVHgBpZKBCYAgEEV/TeAIjuIIbdQIuUGt0CS1gW1iZ2jIVaTnhw+Cvs8/OYDJA4Y8kR3ZR2/kmazxJbpUEfQ/Dm/UG7wVwHkjlQdMFfDdJMFaACebnjJGyDWgcnZu1/lrCrl6NCoEHJBrDwEr5NrT6ko/UV8xdLAC2N49mlc5CylpYh8wCwqrvbBGLoKGvz8Bfq0QPWEUo/EAAAAASUVORK5CYII=')
+const green = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACOSURBVHgBpZLRDYAgEEOrEzgCozCCGzkCbKArOIlugJvgoRAUNcLRpvGH19TkgFQWkqIohhK8UEaKwKcsOg/+WR1vX+AlA74u6q4FqgCOSzwsGHCwbKliAF89Cv89tWmOT4VaVMoVbOBrdQUz+FrD6XItzh4LzYB1HFJ9yrEkZ4l+wvcid9pTssh4UKbPd+4vED2Nd54iAAAAAElFTkSuQmCC')
+
 function createTrayMenu(power, battery, mic, sidetone) {
     return Menu.buildFromTemplate([
         { label: `Power: ${power} ` },
-        { label: `Battery: ${battery}` },
+        {
+            label: `Battery: ${battery}`, type: 'checkbox', click: ({ checked }) => {
+                checked ? tray.setImage(green) : tray.setImage(red)
+            }
+        },
         { label: `Mic: ${mic}` },
         { label: `Sidetone: ${sidetone}` },
         // { label: `Volume: ${mute}` },
         { type: 'separator' },
         { label: 'Show App', click: () => mainWindow.show() },
-        { label: 'Quit App', role: 'quit' },
+        {
+            label: 'Quit App', click: () => {
+                // mainWindow.destroy();
+                // mainWindow = null;
+                app.isQuiting = true;
+                console.log('app.isQuiting: ', app.isQuiting)
+                app.quit();
+            }
+        },
     ]);
 }
 
@@ -46,8 +61,8 @@ function createTrayMenu(power, battery, mic, sidetone) {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 300,
-        height: 370,
+        width: 260,
+        height: 350,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
         }
@@ -55,24 +70,28 @@ function createWindow() {
 
     mainWindow.loadFile('index.html');
     mainWindow.removeMenu();
-
 }
 
 app.whenReady().then(() => {
     createWindow();
     createTray('icon');
 
-    mainWindow.on('minimize', (event) => {
-        mainWindow.hide();
-    });
-
-    mainWindow.on('close', (event) => {
-        if (!app.isQuitting) {
+    mainWindow.on('close', function (event) {
+        if (!app.isQuiting) {
+            console.log('app.isQuiting: ', app.isQuiting)
+            console.log('Preventing app from quiting')
             event.preventDefault();
             mainWindow.hide();
         }
     });
+
+    mainWindow.on('minimize', (event) => {
+        console.log('Minimising to tray')
+        event.preventDefault();
+        mainWindow.hide();
+    });
 });
+
 
 const updateText = (channel, text) => {
     mainWindow.webContents.send(channel, text);
@@ -83,8 +102,8 @@ const devices = HID.devices();
 
 const myDevice = devices.find(d => d.vendorId === 0x03f0 && d.productId === 0x05b7);
 
-let mic = "Muted";
-let sidetone = "Muted";
+let mic = "Off";
+let sidetone = "Off";
 let battery = "0%";
 // let mute = "Muted";
 let power = "Off";
@@ -103,6 +122,29 @@ function requestInfo(device) {
         dataBuffer[1] = dataBufferCodes[i]
         device.write(dataBuffer);
     }
+}
+
+function sendCommand(device, type, onoff) {
+    let dataBuffer = new Buffer.alloc(62);
+    dataBuffer[0] = 0x66
+    const onOffHex = onoff.toString(16);
+
+    console.log(type);
+    switch (type) {
+        case "mic": {
+            dataBuffer[1] = 0x3
+            mic == "Off" ? dataBuffer[2] = 0x0 : dataBuffer[2] = 0x1
+            break;
+        }
+        case "sidetone": {
+            dataBuffer[1] = 0x1
+            sidetone == "Off" ? dataBuffer[2] = 0x1 : dataBuffer[2] = 0x0
+            break;
+        }
+    }
+    console.log('Sending command')
+    device.write(dataBuffer);
+    console.log('Sent buffer: ', dataBuffer)
 }
 
 if (myDevice) {
@@ -137,7 +179,6 @@ if (myDevice) {
 
         if (messageID == 137 || messageID == 13) {
             if (batteryLevelIndicator != 0) {
-                // console.log(`Battery: ${batteryLevelIndicator} percent.`)
                 updateText('batterystatus', `Battery: ${batteryLevelIndicator}%`)
                 battery = batteryLevelIndicator;
             }
@@ -145,47 +186,39 @@ if (myDevice) {
 
         if (messageID == 10 || messageID == 134) {
             if (trueFalseIndicator == 0) {
-                // console.log("Microphone is active.")
-                updateText('micstatus', "Mic: Active")
-                mic = "Active"
+                updateText('micstatus', "Mic: On")
+                mic = "On"
             } else {
-                // console.log("Microphone is muted.")
-                updateText('micstatus', "Mic: Muted")
-                mic = "Muted"
+                updateText('micstatus', "Mic: Off")
+                mic = "Off"
             }
         }
 
         if (messageID == 9 || messageID == 132) {
             if (trueFalseIndicator == 1) {
-                // console.log("Sidetone active.")
-                updateText('sidetonestatus', "Sidetone: Active")
+                updateText('sidetonestatus', "Sidetone: On")
                 sidetone = "On";
             } else {
-                // console.log("Sidetone disabled.")
-                updateText('sidetonestatus', "Sidetone: Disabled")
+                updateText('sidetonestatus', "Sidetone: Off")
                 sidetone = "Off";
             }
         }
 
         // if (messageID == 14) {
         //     if (trueFalseIndicator == 1) {
-        //         // console.log("Sound muted.")
-        //         updateText('mutestatus', "Sound: Muted")
+        //         updateText('mutestatus', "Sound: Off")
         //         mute = "Muted";
         //     } else {
-        //         // console.log("Sound unmuted.")
-        //         updateText('mutestatus', "Sound: Active")
+        //         updateText('mutestatus', "Sound: On")
         //         mute = "Unmuted";
         //     }
         // }
 
         // if (messageID == 137) {
         //     if (volumeMuteIndicator == 88) {
-        //         // console.log("Sound muted.")
         //         updateText('mutestatus', "Sound: Muted")
         //         mute = "Muted";
         //     } else if (volumeMuteIndicator == 89) {
-        //         // console.log("Sound unmuted.")
         //         updateText('mutestatus', "Sound: Active")
         //         mute = "Unmuted";
         //     }
@@ -194,19 +227,16 @@ if (myDevice) {
 
         if (messageID == 130) {
             if (trueFalseIndicator == 1) {
-                console.log("Headset is on.")
                 updateText('powerstatus', "Power: On")
                 power = 'On';
             } else {
-                console.log("Headset is off.")
                 updateText('powerstatus', "Power: Off")
                 power = 'Off';
             }
         }
 
         if (messageID == 8) {
-            console.log("Turned headset off.")
-            updateText('powerstatus', "Turned headset off")
+            updateText('powerstatus', "Power: Off")
             power = 'Off';
         }
 
@@ -220,6 +250,12 @@ if (myDevice) {
     setTimeout(() => {
         requestInfo(device);
     }, 1000);
+
+    ipcMain.on('button-clicked', (event, message) => {
+        console.log('Message from renderer:', message);
+        sendCommand(device, message, 0);
+        // Perform main process operations here
+    });
 
     // Close the device when done
     // device.close();
